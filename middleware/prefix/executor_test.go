@@ -2,6 +2,7 @@ package prefix_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,6 +47,8 @@ func TestIntegration(t *testing.T) {
 		keys = nil
 		err = db.Do(ctx, "KEYS", "*").Scan(&keys)
 		require.NoError(t, err)
+
+		sort.Strings(keys)
 		assert.Equal(t, []string{"buz", "foobar:buz"}, keys)
 
 		err = prefixedDB.Do(ctx, "FLUSHDB").Scan()
