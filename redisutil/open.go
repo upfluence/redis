@@ -5,6 +5,7 @@ import (
 
 	"github.com/upfluence/redis"
 	"github.com/upfluence/redis/backend"
+	"github.com/upfluence/redis/middleware/prefix"
 )
 
 type Option func(*builder)
@@ -23,13 +24,19 @@ func WithMiddleware(f redis.MiddlewareFactory) Option {
 
 func WithURL(v string) Option {
 	var (
-		cfg backend.Config
+		cfg    backend.Config
+		prefix string
 
 		u, err = url.Parse(v)
 	)
 
 	if err == nil {
-		cfg, err = backend.ParseURL(v)
+		qs := u.Query()
+		prefix = qs.Get("prefix")
+		qs.Del("prefix")
+		u.RawQuery = qs.Encode()
+
+		cfg, err = backend.ParseURL(u.String())
 	}
 
 	return func(b *builder) {
@@ -38,7 +45,7 @@ func WithURL(v string) Option {
 			return
 		}
 
-		b.prefix = u.Query().Get("prefix")
+		b.prefix = prefix
 		b.cfg = cfg
 
 	}
@@ -71,6 +78,10 @@ func Open(opts ...Option) (redis.DB, error) {
 	}
 
 	db := backend.NewDBFromConfig(b.cfg)
+
+	if b.prefix != "" {
+		db = prefix.NewFactory(b.prefix).Wrap(db)
+	}
 
 	for _, m := range b.middlewares {
 		db = m.Wrap(db)

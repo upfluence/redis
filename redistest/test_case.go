@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/upfluence/log/record"
 
 	"github.com/upfluence/redis"
@@ -40,6 +41,8 @@ func (tl testLogger) Log(cmd string, vs []interface{}, _ error, d time.Duration,
 type TestCase struct {
 	redisURL string
 
+	skipMiniredis bool
+
 	opts []redisutil.Option
 }
 
@@ -57,11 +60,11 @@ func NewTestCase(opts ...TestCaseOption) *TestCase {
 	return &tc
 }
 
-func (tc *TestCase) buildDB(t *testing.T) redis.DB {
+func (tc *TestCase) buildDB(t *testing.T, url string) redis.DB {
 	db, err := redisutil.Open(
 		append(
 			tc.opts,
-			redisutil.WithURL(tc.redisURL),
+			redisutil.WithURL(url),
 			redisutil.WithMiddleware(logger.NewFactory(testLogger{t})),
 		)...,
 	)
@@ -76,15 +79,36 @@ func (tc *TestCase) buildDB(t *testing.T) redis.DB {
 func (tc *TestCase) Run(t *testing.T, fn func(t *testing.T, db redis.DB)) {
 	t.Helper()
 
-	if tc.redisURL == "" {
-		t.Skip("No redis url given, skipping test case")
+	for name, dbc := range map[string]func(testing.TB) string{
+		"redis": func(t testing.TB) string {
+			t.Helper()
+
+			if tc.redisURL == "" {
+				t.Skip("No redis url given, skipping test case")
+			}
+			return tc.redisURL
+		},
+		"miniredis": func(t testing.TB) string {
+			t.Helper()
+
+			if tc.skipMiniredis {
+				t.Skip("miniredis is deactivated")
+			}
+
+			s := miniredis.RunT(t)
+
+			return fmt.Sprintf("redis://%s/0", s.Addr())
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			url := dbc(t)
+			db := tc.buildDB(t, url)
+
+			defer db.Close()
+
+			db.Do(context.Background(), "FLUSHDB")
+
+			fn(t, db)
+		})
 	}
-
-	db := tc.buildDB(t)
-
-	defer db.Close()
-
-	db.Do(context.Background(), "FLUSHDB")
-
-	fn(t, db)
 }
