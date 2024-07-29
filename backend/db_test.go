@@ -51,7 +51,7 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "1", foo)
 
 		sfoo = nil
-		err = db.Do(ctx, "ZMPOP", 1, "foob", "MIN").Scan(&sfoo)
+		err = db.Do(ctx, "ZRANDMEMBER", "foob").Scan(&sfoo)
 
 		require.ErrorIs(t, err, redis.Empty)
 		assert.Len(t, sfoo, 0)

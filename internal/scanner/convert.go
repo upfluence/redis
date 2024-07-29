@@ -1,4 +1,4 @@
-package backend
+package scanner
 
 import (
 	"bytes"
@@ -235,4 +235,107 @@ func asBytes(rv reflect.Value) ([]byte, bool) {
 	}
 
 	return buf, false
+}
+
+func Assign(src any, dsts []any) error {
+	switch ssrc := src.(type) {
+	case []any:
+		if len(dsts) == 1 {
+			if sc, ok := dsts[0].(redis.ValueScanner); ok {
+				return sc.Scan(src)
+			}
+
+			rv := reflect.ValueOf(dsts[0])
+
+			if rv.Kind() != reflect.Pointer {
+				return errNilPtr
+			}
+
+			rve := rv.Elem()
+
+			if rve.Kind() == reflect.Slice {
+				for _, src := range ssrc {
+					rv := reflect.New(rve.Type().Elem())
+
+					if err := convertAssign(rv.Interface(), src); err != nil {
+						return err
+					}
+
+					rve = reflect.Append(rve, rv.Elem())
+				}
+
+				rv.Elem().Set(rve)
+
+				return nil
+			}
+
+		}
+
+		if len(dsts) != len(ssrc) {
+			return fmt.Errorf("unsupported Scan, storing driver.Value type %T into multiple values", src)
+		}
+
+		for i, dst := range dsts {
+			if err := convertAssign(dst, ssrc[i]); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	case map[any]any:
+		if len(dsts) > 1 {
+			return fmt.Errorf("unsupported Scan, storing driver.Value type %T into multiple values", src)
+		}
+
+		if sc, ok := dsts[0].(redis.ValueScanner); ok {
+			return sc.Scan(src)
+		}
+
+		rv := reflect.ValueOf(dsts[0])
+
+		if rv.Kind() != reflect.Pointer {
+			return errNilPtr
+		}
+
+		rv = rv.Elem()
+
+		if rv.Kind() != reflect.Map {
+			return fmt.Errorf("unsupported Scan, storing driver.Value type %T into %T", src, dsts[0])
+		}
+
+		for k, v := range ssrc {
+			rk := reflect.New(rv.Type().Key())
+			re := reflect.New(rv.Type().Elem())
+
+			if err := convertAssign(rk.Interface(), k); err != nil {
+				return err
+			}
+
+			if err := convertAssign(re.Interface(), v); err != nil {
+				return err
+			}
+
+			rv.SetMapIndex(rk.Elem(), re.Elem())
+		}
+
+		return nil
+	}
+
+	if len(dsts) > 1 {
+		return fmt.Errorf("unsupported Scan, storing driver.Value type %T into multiple values", src)
+	}
+
+	return convertAssign(dsts[0], src)
+}
+
+type StaticScanner struct {
+	Val any
+}
+
+func (ss *StaticScanner) Scan(vs ...interface{}) error {
+	if len(vs) == 0 {
+		return nil
+	}
+
+	return Assign(ss.Val, vs)
 }
