@@ -65,10 +65,6 @@ type DB struct {
 }
 
 func (db *DB) Unwrap() redis.DB {
-	if u, ok := db.db.(interface{ Unwrap() redis.DB }); ok {
-		return u.Unwrap()
-	}
-
 	return db.db
 }
 

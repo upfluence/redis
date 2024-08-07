@@ -58,6 +58,20 @@ func TestIntegration(t *testing.T) {
 		err = db.Do(ctx, "KEYS", "*").Scan(&keys)
 		require.NoError(t, err)
 		assert.Equal(t, []string{"buz"}, keys)
+
+		for _, tt := range []struct {
+			db   redis.DB
+			want string
+		}{
+			{db: db, want: ""},
+			{db: prefixedDB, want: "foobar:"},
+			{
+				db:   prefix.NewFactory("buz").Wrap(prefixedDB),
+				want: "foobar:buz:",
+			},
+		} {
+			assert.Equal(t, tt.want, prefix.Prefix(tt.db))
+		}
 	})
 
 }
