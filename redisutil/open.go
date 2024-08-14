@@ -79,12 +79,12 @@ func Open(opts ...Option) (redis.DB, error) {
 
 	db := backend.NewDBFromConfig(b.cfg)
 
-	if b.prefix != "" {
-		db = prefix.NewFactory(b.prefix).Wrap(db)
-	}
-
 	for _, m := range b.middlewares {
 		db = m.Wrap(db)
+	}
+
+	if b.prefix != "" {
+		db = prefix.NewFactory(b.prefix).Wrap(db)
 	}
 
 	return db, nil
