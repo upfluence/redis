@@ -35,12 +35,35 @@ var (
 		"SETRANGE":    staticIndexRewriter(0),
 		"STRLEN":      staticIndexRewriter(0),
 		"SUBSTR":      staticIndexRewriter(0),
+		"DEL":         indexedRewriteExecutors(func(idx int, _ interface{}) bool { return true }),
 	}
 
 	genericExecutors   = map[string]Executor{}
 	listExecutors      = map[string]Executor{}
 	hashExecutors      = map[string]Executor{}
-	sortedSetExecutors = map[string]Executor{}
+	sortedSetExecutors = map[string]Executor{
+		"ZADD":             staticIndexRewriter(0),
+		"ZCOUNT":           staticIndexRewriter(0),
+		"ZRANGE":           staticIndexRewriter(0),
+		"ZREM":             staticIndexRewriter(0),
+		"ZCARD":            staticIndexRewriter(0),
+		"ZSCORE":           staticIndexRewriter(0),
+		"ZSCAN":            staticIndexRewriter(0),
+		"ZRANK":            staticIndexRewriter(0),
+		"ZREVRANK":         staticIndexRewriter(0),
+		"ZREMRANGEBYSCORE": staticIndexRewriter(0),
+		"ZREMRANGEBYRANK":  staticIndexRewriter(0),
+		"ZREMRANGEBYLEX":   staticIndexRewriter(0),
+		"ZRANDMEMBER":      staticIndexRewriter(0),
+		"ZPOPMIN":          staticIndexRewriter(0),
+		"ZPOPMAX":          staticIndexRewriter(0),
+		"ZINCRBY":          staticIndexRewriter(0),
+		"ZLEXCOUNT":        staticIndexRewriter(0),
+		"ZREVRANGE":        staticIndexRewriter(0),
+		"ZDIFF":            indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx > 0 }),
+		"ZDIFFSTORE":       indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx == 0 || idx > 1 }),
+		"ZRANGESTORE":      indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx < 2 }),
+	}
 
 	serverExecutors = map[string]Executor{
 		"FLUSHDB": flushDBExecutor{},
