@@ -257,7 +257,7 @@ func Assign(src any, dsts []any) error {
 				for _, src := range ssrc {
 					rv := reflect.New(rve.Type().Elem())
 
-					if err := convertAssign(rv.Interface(), src); err != nil {
+					if err := convertAssign(rv.Interface(), src); err != nil && err != redis.Empty {
 						return err
 					}
 
