@@ -63,6 +63,7 @@ var (
 		"ZDIFF":            indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx > 0 }),
 		"ZDIFFSTORE":       indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx == 0 || idx > 1 }),
 		"ZRANGESTORE":      indexedRewriteExecutors(func(idx int, _ interface{}) bool { return idx < 2 }),
+		"ZMSCORE":          staticIndexRewriter(0),
 	}
 
 	serverExecutors = map[string]Executor{
