@@ -38,7 +38,10 @@ var (
 		"DEL":         indexedRewriteExecutors(func(idx int, _ interface{}) bool { return true }),
 	}
 
-	genericExecutors   = map[string]Executor{}
+	genericExecutors = map[string]Executor{
+		"PTTL": staticIndexRewriter(0),
+		"TTL":  staticIndexRewriter(0),
+	}
 	listExecutors      = map[string]Executor{}
 	hashExecutors      = map[string]Executor{}
 	sortedSetExecutors = map[string]Executor{
