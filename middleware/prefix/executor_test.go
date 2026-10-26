@@ -18,8 +18,22 @@ func TestIntegration(t *testing.T) {
 		ctx := context.Background()
 		prefixedDB := prefix.NewFactory("foobar").Wrap(db)
 
-		err := prefixedDB.Do(ctx, "SET", "buz", "biz").Scan()
+		err := prefixedDB.Do(ctx, "SET", "buz", "biz", "PX", 60_000).Scan()
 		require.NoError(t, err)
+
+		var ttl int64
+
+		err = prefixedDB.Do(ctx, "TTL", "buz").Scan(&ttl)
+		require.NoError(t, err)
+		assert.Positive(t, ttl)
+		assert.LessOrEqual(t, ttl, int64(60))
+
+		var pttl int64
+
+		err = prefixedDB.Do(ctx, "PTTL", "buz").Scan(&pttl)
+		require.NoError(t, err)
+		assert.Positive(t, pttl)
+		assert.LessOrEqual(t, pttl, int64(60_000))
 
 		var buz string
 		err = prefixedDB.Do(ctx, "GET", "buz").Scan(&buz)
